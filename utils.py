@@ -267,7 +267,6 @@ class SaveModelsCallback(tf.keras.callbacks.Callback):
             self.generator.save(generator_file_name)
             self.d1.save(d1_file_name)
             self.d2.save(d2_file_name)
-            print(f"Models saved at batch {self.batch_count}")
 
 class GenerateAndSaveCallback(tf.keras.callbacks.Callback):
     def __init__(self, generator, test_input, save_freq, path):
