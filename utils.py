@@ -2,6 +2,7 @@ import numpy as np
 import keras
 import tensorflow as tf
 from keras.layers import Conv2D,MaxPool2D,Concatenate,UpSampling2D,Input,LeakyReLU,Flatten,Dense
+import cv2
 
 class Localization(tf.keras.layers.Layer):
     def __init__(self):
@@ -283,4 +284,5 @@ class GenerateAndSaveCallback(tf.keras.callbacks.Callback):
             # Generate test outputs
             predictions,_ = self.generator.predict(self.test_input)
             image_out = predictions[0,...]
-            np.save(self.path,image_out)
+            image_out = 255 * image_out / image_out.max()
+            cv2.imwrite(self.path,image_out)
