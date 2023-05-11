@@ -222,7 +222,7 @@ def build_generator():
     deconv_6 =Conv2D(64, (5,5),activation= 'relu',padding ='same', name = 'deconv_6', kernel_initializer=initializer)(concatenated_10)
 
     up_7 = UpSampling2D(size=(2,2))(deconv_6)
-    output_uncroped = Conv2D(3,(5,5),activation = 'sigmoid',padding ='same', name = 'out', kernel_initializer=initializer)(up_7)
+    output_uncroped = Conv2D(3,(5,5),padding ='same', name = 'out', kernel_initializer=initializer)(up_7)
 
     Autoencoder = tf.keras.Model(inputs = [input_sequence , input_frame], outputs = [output_uncroped,[warped_0, warped_1, warped_2, warped_3,warped_4]])
     return(Autoencoder)
