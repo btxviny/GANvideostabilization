@@ -257,11 +257,11 @@ class SaveModelsCallback(tf.keras.callbacks.Callback):
         self.d2 = d2
         self.save_freq = save_freq
         self.path = path
-        self.batch_count = 0
+        self.epoch_count = 0
         
-    def on_batch_end(self, batch, logs=None):
-        self.batch_count += 1
-        if self.batch_count % self.save_freq == 0:
+    def on_epoch_end(self, epoch, logs=None):
+        self.epoch_count += 1
+        if self.epoch_count % self.save_freq == 0:
             generator_file_name = self.path + "/generator.h5"
             d1_file_name = self.path + "/d1.h5"
             d2_file_name = self.path + "/d2.h5"
