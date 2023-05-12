@@ -1,7 +1,7 @@
 import numpy as np
 import keras
 import tensorflow as tf
-from keras.layers import Conv2D,MaxPool2D,Concatenate,UpSampling2D,Input,LeakyReLU,Flatten,Dense
+from keras.layers import Conv2D,MaxPool2D,Concatenate,UpSampling2D,Input,LeakyReLU,Flatten,Dense,BatchNormalization
 import cv2
 
 class Localization(tf.keras.layers.Layer):
@@ -179,7 +179,7 @@ def build_generator():
     conv_40 = Conv2D(512, (3,3),name='conv_40',padding='same', kernel_initializer=initializer)(warped_3)
     conv_40 = LeakyReLU(0.2)(conv_40)
     conv_40 = MaxPool2D((2,2), strides =(2,2))(conv_40)
-    conv_41 = Conv2D(512, (3,3), activation='leaky_relu', name='conv_41',padding='same', kernel_initializer=initializer)(conv_31)
+    conv_41 = Conv2D(512, (3,3), name='conv_41',padding='same', kernel_initializer=initializer)(conv_31)
     conv_41 = LeakyReLU(0.2)(conv_41)
     conv_41 = MaxPool2D((2,2), strides=(2,2))(conv_41)
     concatenated_4 = tf.keras.layers.Concatenate(axis =-1)([conv_40, conv_41])
@@ -223,7 +223,7 @@ def build_generator():
     deconv_6 =Conv2D(64, (3,3),activation= 'relu',padding ='same', name = 'deconv_6', kernel_initializer=initializer)(concatenated_10)
 
     up_7 = UpSampling2D(size=(2,2))(deconv_6)
-    output_uncroped = Conv2D(3,(3,3),activation ='sigmoid',padding ='same', name = 'out', kernel_initializer=initializer)(up_7)
+    output_uncroped = Conv2D(3,(3,3),activation ='tanh',padding ='same', name = 'out', kernel_initializer=initializer)(up_7)
 
     Autoencoder = tf.keras.Model(inputs = [input_sequence , input_frame], outputs = [output_uncroped,[warped_0, warped_1, warped_2, warped_3,warped_4]])
     return(Autoencoder)
@@ -232,17 +232,21 @@ def build_generator():
 def build_discriminator(input_shape):
     initializer = tf.keras.initializers.RandomNormal(mean = 0, stddev=0.02,seed=42)
     inputs = Input(shape=input_shape)
-    x = Conv2D(64, kernel_size=3, strides=1, padding='same', kernel_initializer=initializer)(inputs)
+    x = Conv2D(64, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(inputs)
     x = LeakyReLU(alpha=0.2)(x)
+    x = BatchNormalization()(x)
 
     x = Conv2D(128, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(x)
     x = LeakyReLU(alpha=0.2)(x)
+    x = BatchNormalization()(x)
 
     x = Conv2D(256, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(x)
     x = LeakyReLU(alpha=0.2)(x)
+    x = BatchNormalization()(x)
 
     x = Conv2D(512, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(x)
     x = LeakyReLU(alpha=0.2)(x)
+    x = BatchNormalization()(x)
 
     x = Flatten()(x)
     x = Dense(1,activation=None, kernel_initializer=initializer)(x)
