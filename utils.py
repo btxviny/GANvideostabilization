@@ -291,6 +291,6 @@ class GenerateAndSaveCallback(tf.keras.callbacks.Callback):
         if self.batch_count % self.save_freq == 0:
             # Generate test outputs
             predictions,_ = self.generator.predict(self.test_input)
-            image_out = predictions[0,...]
-            image_out = 255 * image_out / image_out.max()
-            cv2.imwrite(self.path,image_out)
+            img = predictions[0,...]
+            img = 0.5 * img + 0.5
+            cv2.imwrite(self.path,img)
