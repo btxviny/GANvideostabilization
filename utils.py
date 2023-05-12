@@ -233,23 +233,27 @@ def build_discriminator(input_shape):
     initializer = tf.keras.initializers.RandomNormal(mean = 0, stddev=0.02,seed=42)
     inputs = Input(shape=input_shape)
     x = Conv2D(64, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(inputs)
-    x = LeakyReLU(alpha=0.2)(x)
     x = BatchNormalization()(x)
+    x = LeakyReLU(alpha=0.2)(x)
+    
 
     x = Conv2D(128, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(x)
-    x = LeakyReLU(alpha=0.2)(x)
     x = BatchNormalization()(x)
+    x = LeakyReLU(alpha=0.2)(x)
+    
 
     x = Conv2D(256, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(x)
-    x = LeakyReLU(alpha=0.2)(x)
     x = BatchNormalization()(x)
+    x = LeakyReLU(alpha=0.2)(x)
+    
 
     x = Conv2D(512, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(x)
-    x = LeakyReLU(alpha=0.2)(x)
     x = BatchNormalization()(x)
+    x = LeakyReLU(alpha=0.2)(x)
+    
 
     x = Flatten()(x)
-    x = Dense(1,activation=None, kernel_initializer=initializer)(x)
+    x = Dense(1,activation='sigmoid', kernel_initializer=initializer)(x)
     model = tf.keras.Model(inputs=inputs, outputs=x)
     return model
 
