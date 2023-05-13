@@ -253,7 +253,7 @@ def build_discriminator(input_shape):
     
     x = Dropout(0.25)(x)
     x = Flatten()(x)
-    x = Dense(1,activation='sigmoid', kernel_initializer=initializer)(x)
+    x = Dense(1, kernel_initializer=initializer)(x)
     model = tf.keras.Model(inputs=inputs, outputs=x)
     return model
 
