@@ -1,7 +1,7 @@
 import numpy as np
 import keras
 import tensorflow as tf
-from keras.layers import Conv2D,MaxPool2D,Concatenate,UpSampling2D,Input,LeakyReLU,Flatten,Dense,BatchNormalization
+from keras.layers import Conv2D,MaxPool2D,Concatenate,UpSampling2D,Input,LeakyReLU,Flatten,Dense,BatchNormalization,Dropout
 import cv2
 
 class Localization(tf.keras.layers.Layer):
@@ -236,22 +236,22 @@ def build_discriminator(input_shape):
     x = BatchNormalization()(x)
     x = LeakyReLU(alpha=0.2)(x)
     
-
+    x = Dropout(0.25)(x)
     x = Conv2D(128, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(x)
     x = BatchNormalization()(x)
     x = LeakyReLU(alpha=0.2)(x)
     
-
+    x = Dropout(0.25)(x)
     x = Conv2D(256, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(x)
     x = BatchNormalization()(x)
     x = LeakyReLU(alpha=0.2)(x)
     
-
+    x = Dropout(0.25)(x)
     x = Conv2D(512, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(x)
     x = BatchNormalization()(x)
     x = LeakyReLU(alpha=0.2)(x)
     
-
+    x = Dropout(0.25)(x)
     x = Flatten()(x)
     x = Dense(1,activation='sigmoid', kernel_initializer=initializer)(x)
     model = tf.keras.Model(inputs=inputs, outputs=x)
@@ -277,20 +277,3 @@ class SaveModelsCallback(tf.keras.callbacks.Callback):
             self.d1.save(d1_file_name)
             self.d2.save(d2_file_name)
 
-class GenerateAndSaveCallback(tf.keras.callbacks.Callback):
-    def __init__(self, generator, test_input, save_freq, path):
-        super(GenerateAndSaveCallback, self).__init__()
-        self.generator = generator
-        self.test_input = test_input
-        self.save_freq = save_freq
-        self.path = path
-        self.batch_count = 0
-
-    def on_batch_end(self, batch, logs=None):
-        self.batch_count += 1
-        if self.batch_count % self.save_freq == 0:
-            # Generate test outputs
-            predictions,_ = self.generator.predict(self.test_input)
-            img = predictions[0,...]
-            img = 0.5 * img + 0.5
-            cv2.imwrite(self.path,img)
