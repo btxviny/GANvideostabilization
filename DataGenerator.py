@@ -26,7 +26,9 @@ class DataGenerator:
             paths = self.get_paths(video)
             stable_frames, unstable_frames = load_video(paths,self.shape)
             n,h,w,c = stable_frames.shape
-            sequence = np.zeros(shape=(h,w,self.length),dtype=np.uint8)
+            sequence = np.zeros(shape=(h,w,self.length),dtype=np.float32)
+            #It = np.zeros(shape=(h,w,c),dtype=np.float32)
+            #Igt = np.zeros_like(It)
             for frame_idx in range(30,n):
                 for (i,j) in zip(range(frame_idx - self.stride, frame_idx - self.length*self.stride, -self.stride) , range(self.length)):
                     sequence[:,:,j] = cv2.cvtColor(stable_frames[i,...],cv2.COLOR_BGR2GRAY)
@@ -58,8 +60,8 @@ def load_video(paths,shape):
     stable_frames = stable_frames[:frame_count]
     unstable_frames = unstable_frames[:frame_count]
     #convert to np.arrays
-    stable_frames = np.array(stable_frames,dtype=np.uint8)
-    unstable_frames = np.array(unstable_frames,dtype=np.uint8)
+    stable_frames = np.array(stable_frames,dtype=np.float32)
+    unstable_frames = np.array(unstable_frames,dtype=np.float32)
     return(stable_frames,unstable_frames)
 
 def preprocess(img,shape):
