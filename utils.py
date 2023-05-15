@@ -134,7 +134,7 @@ class BilinearInterpolation(tf.keras.layers.Layer):
 
 
 def build_generator(h,w):
-    initializer = tf.keras.initializers.RandomNormal(mean = 1, stddev=0.1,seed=42)
+    initializer = tf.keras.initializers.RandomNormal(mean = 0, stddev=0.1,seed=42)
 
     input_sequence = Input(shape =(h,w,5))
     input_frame = Input(shape = (h,w,3))
@@ -219,7 +219,7 @@ def build_generator(h,w):
 
 
 def build_discriminator(input_shape):
-    initializer = tf.keras.initializers.RandomNormal(mean = 0, stddev=0.02,seed=42)
+    initializer = tf.keras.initializers.RandomNormal(mean = 0, stddev=0.1,seed=42)
     inputs = Input(shape=input_shape)
     x = Conv2D(64, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(inputs)
     x = BatchNormalization()(x)
