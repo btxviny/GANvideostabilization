@@ -1,7 +1,7 @@
 import numpy as np
 import keras
 import tensorflow as tf
-from keras.layers import Conv2D,MaxPool2D,Concatenate,UpSampling2D,Input,LeakyReLU,Flatten,Dense,BatchNormalization,Dropout
+from keras.layers import Conv2D,AveragePooling2D,Concatenate,UpSampling2D,Input,LeakyReLU,Flatten,Dense,BatchNormalization,Dropout
 import cv2
 
 class Localization(tf.keras.layers.Layer):
@@ -133,11 +133,11 @@ class BilinearInterpolation(tf.keras.layers.Layer):
 
 
 
-def build_generator():
-    initializer = tf.keras.initializers.RandomNormal(mean = 0, stddev=0.02,seed=42)
+def build_generator(h,w):
+    initializer = tf.keras.initializers.RandomNormal(mean = 1, stddev=0.1,seed=42)
 
-    input_sequence = Input(shape =(256,256,5))
-    input_frame = Input(shape = (256,256,3))
+    input_sequence = Input(shape =(h,w,5))
+    input_frame = Input(shape = (h,w,3))
     #####################
     # ENCODER 
     ######################
@@ -145,56 +145,45 @@ def build_generator():
     theta_0 = Localization()(concatenated_0)
     warped_0 = BilinearInterpolation(256,256)([input_frame,theta_0])
 
-    conv_10 =  Conv2D(64, kernel_size=(3,3), name='conv_10', padding='same', kernel_initializer=initializer)(warped_0)
+    conv_10 =  Conv2D(64, kernel_size=(3,3),strides=(2,2), name='conv_10', padding='same', kernel_initializer=initializer)(warped_0)
     conv_10 = LeakyReLU(0.2)(conv_10)
-    conv_10 = MaxPool2D((2,2), strides=(2,2))(conv_10)
 
-    conv_11 = Conv2D(64, kernel_size=(3,3), name='conv_11',padding='same', kernel_initializer=initializer)(input_sequence)
+    conv_11 = Conv2D(64, kernel_size=(3,3),strides=(2,2), name='conv_11',padding='same', kernel_initializer=initializer)(input_sequence)
     conv_11 = LeakyReLU(0.2)(conv_11)
-    conv_11 = MaxPool2D((2,2), strides=(2,2))(conv_11)
     concatenated_1 = Concatenate(axis = -1)([conv_10, conv_11])
     theta_1 = Localization()(concatenated_1)
     warped_1 = BilinearInterpolation(128,128)([conv_10, theta_1])
 
-    conv_20 =  Conv2D(128, kernel_size=(3,3), name='conv_20',padding='same', kernel_initializer=initializer)(warped_1) #####
+    conv_20 =  Conv2D(128, kernel_size=(3,3),strides=(2,2), name='conv_20',padding='same', kernel_initializer=initializer)(warped_1) #####
     conv_20 = LeakyReLU(0.2)(conv_20)
-    conv_20 =  MaxPool2D((2,2), strides=(2,2))(conv_20)
-    conv_21 = Conv2D(128, kernel_size=(3,3), name='conv_21',padding='same', kernel_initializer=initializer)(conv_11)
+    conv_21 = Conv2D(128, kernel_size=(3,3),strides=(2,2), name='conv_21',padding='same', kernel_initializer=initializer)(conv_11)
     conv_21 = LeakyReLU(0.2)(conv_21)
-    conv_21 =  MaxPool2D((2,2), strides=(2,2))(conv_21)
     concatenated_2 = Concatenate(axis = -1)([conv_20, conv_21])
     theta_2 = Localization()(concatenated_2)
     warped_2 = BilinearInterpolation(64,64)([conv_20,theta_2])
 
-    conv_30 = Conv2D(256, kernel_size=(3,3), name='conv_30',padding='same', kernel_initializer=initializer)(warped_2) #####
+    conv_30 = Conv2D(256, kernel_size=(3,3),strides=(2,2), name='conv_30',padding='same', kernel_initializer=initializer)(warped_2) #####
     conv_30 = LeakyReLU(0.2)(conv_30)
-    conv_30 = MaxPool2D((2,2), strides=(2,2))(conv_30)
-    conv_31 = Conv2D(256,(3,3), name='conv_31',padding='same', kernel_initializer=initializer)(conv_21)
+    conv_31 = Conv2D(256,(3,3),strides=(2,2), name='conv_31',padding='same', kernel_initializer=initializer)(conv_21)
     conv_31 = LeakyReLU(0.2)(conv_31)
-    conv_31 = MaxPool2D((2,2), strides=(2,2))(conv_31)
     concatenated_3 = Concatenate(axis=-1)([conv_30, conv_31])
     theta_3 = Localization()(concatenated_3)
     warped_3 = BilinearInterpolation(32,32)([conv_30,theta_3])
 
-    conv_40 = Conv2D(512, (3,3),name='conv_40',padding='same', kernel_initializer=initializer)(warped_3)
+    conv_40 = Conv2D(512, (3,3),strides=(2,2),name='conv_40',padding='same', kernel_initializer=initializer)(warped_3)
     conv_40 = LeakyReLU(0.2)(conv_40)
-    conv_40 = MaxPool2D((2,2), strides =(2,2))(conv_40)
-    conv_41 = Conv2D(512, (3,3), name='conv_41',padding='same', kernel_initializer=initializer)(conv_31)
+    conv_41 = Conv2D(512, (3,3),strides=(2,2),name='conv_41',padding='same', kernel_initializer=initializer)(conv_31)
     conv_41 = LeakyReLU(0.2)(conv_41)
-    conv_41 = MaxPool2D((2,2), strides=(2,2))(conv_41)
     concatenated_4 = tf.keras.layers.Concatenate(axis =-1)([conv_40, conv_41])
     theta_4 = Localization()(concatenated_4)
     warped_4 = BilinearInterpolation(16,16)([conv_40, theta_4])
 
-    conv_5 = Conv2D(512, (3,3),name='conv_5',padding='same', kernel_initializer=initializer)(warped_4)
+    conv_5 = Conv2D(512, (3,3),strides=(2,2),name='conv_5',padding='same', kernel_initializer=initializer)(warped_4)
     conv_5 = LeakyReLU(0.2)(conv_5)
-    conv_5 = MaxPool2D((2,2), strides=(2,2))(conv_5)
-    conv_6 = Conv2D(512, (3,3),name='conv_6',padding='same', kernel_initializer=initializer)(conv_5)
+    conv_6 = Conv2D(512, (3,3),strides=(2,2),name='conv_6',padding='same', kernel_initializer=initializer)(conv_5)
     conv_6 = LeakyReLU(0.2)(conv_6)
-    conv_6 = MaxPool2D((2,2), strides=(2,2))(conv_6)
-    conv_7 = Conv2D(512, (3,3),name='conv_7',padding='same', kernel_initializer=initializer)(conv_6)
+    conv_7 = Conv2D(512, (3,3),strides=(2,2),name='conv_7',padding='same', kernel_initializer=initializer)(conv_6)
     conv_7 = LeakyReLU(0.2)(conv_7)
-    conv_7 = MaxPool2D((2,2), strides=(2,2))(conv_7)
     ##############################################
     #DECODER
     ##############################################
