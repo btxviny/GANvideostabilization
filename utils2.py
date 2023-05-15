@@ -156,15 +156,15 @@ class UNet(tf.keras.Model):
                     tf.keras.layers.Conv2D(out_nc, kernel_size=k_size, strides=stride, padding='same',kernel_initializer=initializer),
                     tf.keras.layers.LeakyReLU(0.2)
                 ])
-                self.GateConv = tf.keras.Sequential([
+                '''self.GateConv = tf.keras.Sequential([
                     tf.keras.layers.Conv2D(out_nc, kernel_size=k_size, strides=stride, padding='same',kernel_initializer=initializer),
                     tf.keras.layers.Activation('sigmoid')
-                ])
+                ])'''
 
             def call(self, x):
                 feature = self.seq(x)
-                gate = self.GateConv(x)
-                return feature * gate
+                #gate = self.GateConv(x)
+                return feature #* gate
 
 
         class Decoder(tf.keras.layers.Layer):
@@ -181,16 +181,16 @@ class UNet(tf.keras.Model):
                 else:
                     self.activ = tf.keras.layers.ReLU()
 
-                self.GateConv = tf.keras.Sequential([
+                '''self.GateConv = tf.keras.Sequential([
                     tf.keras.layers.Conv2D(in_nc, kernel_size=k_size, strides=stride, padding='same',kernel_initializer=initializer),
                     tf.keras.layers.Conv2D(out_nc, kernel_size=k_size, strides=stride, padding='same',kernel_initializer=initializer),
                     tf.keras.layers.Activation('sigmoid')
-                ])
+                ])'''
 
             def call(self, x):
                 s = self.seq(x)
                 s = self.activ(s)
-                return s * self.GateConv(x)
+                return s #* self.GateConv(x)
             
         #Encoder
         self.stn0 = STN((256,256))
