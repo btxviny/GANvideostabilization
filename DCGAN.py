@@ -43,14 +43,17 @@ class GAN(keras.Model):
             d2_real_predictions = self.d2(real_in_d2)
             d2_fake_predictions = self.d2(fake_in_d2)
 
+            random_zero = tf.random.uniform(tf.shape(d1_real_predictions), minval=0.0, maxval=0.1)
+            random_one = tf.random.uniform(tf.shape(d1_fake_predictions), minval=0.9, maxval=1.0)
+
             weight = tf.constant([0.5], dtype = tf.float32)
-            real_loss_d1 = tf.multiply(weight,tf.reduce_mean(tf.square(tf.zeros_like(d1_real_predictions) - d1_real_predictions)))
-            fake_loss_d1 = tf.multiply(weight,tf.reduce_mean(tf.square(tf.ones_like(d1_fake_predictions) - d1_fake_predictions)))
+            real_loss_d1 = tf.multiply(weight,tf.reduce_mean(tf.square(random_zero - d1_real_predictions)))
+            fake_loss_d1 = tf.multiply(weight,tf.reduce_mean(tf.square(random_one - d1_fake_predictions)))
             weight = tf.constant([0.5], dtype = tf.float32)
             d1_loss = tf.add(real_loss_d1,fake_loss_d1)
 
-            real_loss_d2 = tf.multiply(weight,tf.reduce_mean(tf.square(tf.zeros_like(d2_real_predictions) - d2_real_predictions)))
-            fake_loss_d2 = tf.multiply(weight,tf.reduce_mean(tf.square(tf.ones_like(d2_fake_predictions) - d2_fake_predictions)))
+            real_loss_d2 = tf.multiply(weight,tf.reduce_mean(tf.square(random_zero - d2_real_predictions)))
+            fake_loss_d2 = tf.multiply(weight,tf.reduce_mean(tf.square(random_one - d2_fake_predictions)))
             d2_loss = tf.add(real_loss_d2,fake_loss_d2)
 
             gen_loss = self.generator_loss([generated_frame, Igt], [d1_fake_predictions, d2_fake_predictions])
