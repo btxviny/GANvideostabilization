@@ -131,23 +131,22 @@ class BilinearInterpolation(tf.keras.layers.Layer):
                         
         return tf.math.add_n([wa*Ia + wb*Ib + wc*Ic + wd*Id])    
 
+class STN(tf.keras.Model):
+    def __init__(self,shape):
+        super(STN, self).__init__()
+        self.Localization = Localization()
+        self.BilinearInterpolation =  BilinearInterpolation(shape[0],shape[1])
+    def call(self, inputs):
+        feat1, feat2 = inputs
+        theta = self.Localization(tf.concat([feat1, feat2],axis =-1))
+        warped = self.BilinearInterpolation([feat1,theta])
+        #warped = tfa.image.transform(feat1,theta,interpolation='nearest')
+        return warped, theta
 
-
-initializer = tf.keras.initializers.RandomNormal(mean = 0, stddev=0.1,seed=42)
+initializer = tf.keras.initializers.RandomNormal(mean = 0, stddev=0.002,seed=42)
 class UNet(tf.keras.Model):
     def __init__(self):
         super(UNet,self).__init__()
-        class STN(tf.keras.Model):
-            def __init__(self,shape):
-                super(STN, self).__init__()
-                self.Localization = Localization()
-                self.BilinearInterpolation =  BilinearInterpolation(shape[0],shape[1])
-            def call(self, inputs):
-                feat1, feat2 = inputs
-                theta = self.Localization(tf.concat([feat1, feat2],axis =-1))
-                warped = self.BilinearInterpolation([feat1,theta])
-                #warped = tfa.image.transform(feat1,theta,interpolation='nearest')
-                return warped, theta
         class Encoder(tf.keras.layers.Layer):
             def __init__(self, in_nc, out_nc, stride, k_size=3, pad=(1,1)):
                 super(Encoder, self).__init__()
@@ -156,15 +155,10 @@ class UNet(tf.keras.Model):
                     tf.keras.layers.Conv2D(out_nc, kernel_size=k_size, strides=stride, padding='same',kernel_initializer=initializer),
                     tf.keras.layers.LeakyReLU(0.2)
                 ])
-                '''self.GateConv = tf.keras.Sequential([
-                    tf.keras.layers.Conv2D(out_nc, kernel_size=k_size, strides=stride, padding='same',kernel_initializer=initializer),
-                    tf.keras.layers.Activation('sigmoid')
-                ])'''
 
             def call(self, x):
                 feature = self.seq(x)
-                #gate = self.GateConv(x)
-                return feature #* gate
+                return feature
 
 
         class Decoder(tf.keras.layers.Layer):
@@ -181,46 +175,46 @@ class UNet(tf.keras.Model):
                 else:
                     self.activ = tf.keras.layers.ReLU()
 
-                '''self.GateConv = tf.keras.Sequential([
-                    tf.keras.layers.Conv2D(in_nc, kernel_size=k_size, strides=stride, padding='same',kernel_initializer=initializer),
-                    tf.keras.layers.Conv2D(out_nc, kernel_size=k_size, strides=stride, padding='same',kernel_initializer=initializer),
-                    tf.keras.layers.Activation('sigmoid')
-                ])'''
-
             def call(self, x):
                 s = self.seq(x)
                 s = self.activ(s)
-                return s #* self.GateConv(x)
+                return s 
             
         #Encoder
         self.stn0 = STN((256,256))
-        self.enc10 = Encoder(3,64, stride=2)
-        self.enc11 = Encoder(5, 64, stride=2)
+        self.enc10 = Encoder(3,64,k_size=5, stride=2)
+        self.enc11 = Encoder(5, 64,k_size=5, stride=2)
         #-------------------------------------
         self.stn1 = STN((128,128))
-        self.enc20 = Encoder(64,128,stride=2)
-        self.enc21 = Encoder(64,128,stride=2)
+        self.enc20 = Encoder(64,128,k_size=5,stride=2)
+        self.enc21 = Encoder(64,128,k_size=5,stride=2)
         #-------------------------------------
         self.stn2 = STN((64,64))
-        self.enc30 = Encoder(128,256,stride=2)
-        self.enc31 = Encoder(128,256,stride=2)
+        self.enc30 = Encoder(128,256,k_size=5,stride=2)
+        self.enc31 = Encoder(128,256,k_size=5,stride=2)
         #-------------------------------------
         self.stn3 = STN((32,32))
-        self.enc40 = Encoder(256,512,stride=2)
-        self.enc41 = Encoder(256,512,stride=2)
+        self.enc40 = Encoder(256,512,k_size=3,stride=2)
+        self.enc41 = Encoder(256,512,k_size=3,stride=2)
         #-------------------------------------
         self.stn4 = STN((16,16))
-        self.enc5 = Encoder(512,512,stride=2)
-        self.enc6 = Encoder(512,512,stride=2)
-        self.enc7 = Encoder(512,512,stride = 2)
+        self.enc5 = Encoder(512,512,k_size=3,stride=2)
+        self.enc6 = Encoder(512,512,k_size=3,stride=2)
+        self.enc7 = Encoder(512,512,k_size=3,stride = 2)
         #Decoder
-        self.dec0 = Decoder(512, 1024, stride=1)
-        self.dec1 = Decoder(1024, 512, stride=1)
-        self.dec2 = Decoder(512, 512, stride=1)
-        self.dec3 = Decoder(512, 256, stride=1)
-        self.dec4 = Decoder(256, 128, stride=1)
-        self.dec5 = Decoder(128, 64, stride=1 )
-        self.dec6 = Decoder(64, 3, stride=1 ,tanh=True)
+        self.dec0 = Decoder(512, 1024,k_size=3, stride=1)
+        self.dec1 = Decoder(1024, 512,k_size=3, stride=1)
+        self.dec2 = Decoder(512, 512,k_size=3, stride=1)
+        self.dec3 = Decoder(512, 256,k_size=3, stride=1)
+        self.dec4 = Decoder(256, 128,k_size=3, stride=1)
+        self.dec5 = Decoder(128, 64,k_size=3, stride=1 )
+        self.dec6 = Decoder(64, 3,k_size=3, stride=1 ,tanh=True)
+    def transform(self, input, theta, layer):
+        for i in range(layer):
+            mat = theta[layer - i - 1]
+            input = BilinearInterpolation(input.shape[1],input.shape[2])([input,mat])
+        return(input)
+    
     def call(self,input):
         sequence, unsteady = input
         
@@ -245,42 +239,47 @@ class UNet(tf.keras.Model):
         s5 = self.enc5(T4)
         s6 = self.enc6(s5)
         s7 = self.enc7(s6)
+        T = [theta4, theta3 ,theta1 ,theta1, theta0]
 
         up0 = tf.keras.layers.UpSampling2D(size =(2,2),interpolation='nearest')(s7)
         dec0 = self.dec0(tf.concat([up0,s6],axis=-1))
         up1 = tf.keras.layers.UpSampling2D(size =(2,2),interpolation='nearest')(dec0)
         dec1 = self.dec1(tf.concat([up1,s5],axis=-1))
         up2 = tf.keras.layers.UpSampling2D(size =(2,2),interpolation='nearest')(dec1)
-        dec2 = self.dec2(tf.concat([up2,s40],axis=-1))
+        trans1 = self.transform(s40,T,1) # warp by T4
+        dec2 = self.dec2(tf.concat([up2,trans1],axis=-1))
         up3 = tf.keras.layers.UpSampling2D(size =(2,2),interpolation='nearest')(dec2)
-        dec3 = self.dec3(tf.concat([up3,s30],axis=-1))
+        trans2 = self.transform(s30,T,2)  # warp by T3 X T4
+        dec3 = self.dec3(tf.concat([up3,trans2],axis=-1))
         up4 = tf.keras.layers.UpSampling2D(size =(2,2),interpolation='nearest')(dec3)
-        dec4 = self.dec4(tf.concat([up4,s20],axis=-1))
+        trans3 = self.transform(s20,T,3) # warp by T2 X T3 X T4
+        dec4 = self.dec4(tf.concat([up4,trans3],axis=-1))
         up5 = tf.keras.layers.UpSampling2D(size =(2,2),interpolation='nearest')(dec4)
-        dec5 = self.dec5(tf.concat([up5,s10],axis=-1))
+        trans4 = self.transform(s10,T,4) # warp by T1 X T2 X T3 X T4
+        dec5 = self.dec5(tf.concat([up5,trans4],axis=-1))
         up6 = tf.keras.layers.UpSampling2D(size =(2,2),interpolation='nearest')(dec5)
         out  = self.dec6(up6)
-        return out , [theta0,theta1,theta2, theta3, theta4]
+        return out , T
 
 def build_discriminator(input_shape):
     initializer = tf.keras.initializers.RandomNormal(mean = 0, stddev=0.02,seed=42)
     inputs = Input(shape=input_shape)
-    x = Conv2D(64, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(inputs)
+    x = Conv2D(64, kernel_size=5, strides=2, padding='same', kernel_initializer=initializer)(inputs)
     x = BatchNormalization()(x)
     x = LeakyReLU(alpha=0.2)(x)
     
     x = Dropout(0.25)(x)
-    x = Conv2D(128, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(x)
+    x = Conv2D(128, kernel_size=5, strides=2, padding='same', kernel_initializer=initializer)(x)
     x = BatchNormalization()(x)
     x = LeakyReLU(alpha=0.2)(x)
     
     x = Dropout(0.25)(x)
-    x = Conv2D(256, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(x)
+    x = Conv2D(256, kernel_size=5, strides=2, padding='same', kernel_initializer=initializer)(x)
     x = BatchNormalization()(x)
     x = LeakyReLU(alpha=0.2)(x)
     
     x = Dropout(0.25)(x)
-    x = Conv2D(512, kernel_size=3, strides=2, padding='same', kernel_initializer=initializer)(x)
+    x = Conv2D(512, kernel_size=5, strides=2, padding='same', kernel_initializer=initializer)(x)
     x = BatchNormalization()(x)
     x = LeakyReLU(alpha=0.2)(x)
     
