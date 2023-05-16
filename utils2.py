@@ -140,7 +140,6 @@ class STN(tf.keras.Model):
         feat1, feat2 = inputs
         theta = self.Localization(tf.concat([feat1, feat2],axis =-1))
         warped = self.BilinearInterpolation([feat1,theta])
-        #warped = tfa.image.transform(feat1,theta,interpolation='nearest')
         return warped, theta
 
 initializer = tf.keras.initializers.RandomNormal(mean = 0, stddev=0.002,seed=42)
@@ -153,6 +152,7 @@ class UNet(tf.keras.Model):
 
                 self.seq = tf.keras.Sequential([
                     tf.keras.layers.Conv2D(out_nc, kernel_size=k_size, strides=stride, padding='same',kernel_initializer=initializer),
+                    tf.keras.layers.BatchNormalization(momentum=0.8),
                     tf.keras.layers.LeakyReLU(0.2)
                 ])
 
@@ -166,8 +166,8 @@ class UNet(tf.keras.Model):
                 super(Decoder, self).__init__()
 
                 self.seq = tf.keras.Sequential([
-                    tf.keras.layers.Conv2D(in_nc, kernel_size=k_size, strides=stride, padding='same',kernel_initializer=initializer),
-                    tf.keras.layers.Conv2D(out_nc, kernel_size=k_size, strides=stride, padding='same',kernel_initializer=initializer)
+                    tf.keras.layers.Conv2D(out_nc, kernel_size=k_size, strides=stride, padding='same',kernel_initializer=initializer),
+                    tf.keras.layers.BatchNormalization(momentum=0.8)
                 ])
 
                 if tanh:
@@ -182,33 +182,33 @@ class UNet(tf.keras.Model):
             
         #Encoder
         self.stn0 = STN((256,256))
-        self.enc10 = Encoder(3,64,k_size=5, stride=2)
-        self.enc11 = Encoder(5, 64,k_size=5, stride=2)
+        self.enc10 = Encoder(3,64, stride=2)
+        self.enc11 = Encoder(5, 64, stride=2)
         #-------------------------------------
         self.stn1 = STN((128,128))
-        self.enc20 = Encoder(64,128,k_size=5,stride=2)
-        self.enc21 = Encoder(64,128,k_size=5,stride=2)
+        self.enc20 = Encoder(64,128,stride=2)
+        self.enc21 = Encoder(64,128,stride=2)
         #-------------------------------------
         self.stn2 = STN((64,64))
-        self.enc30 = Encoder(128,256,k_size=3,stride=2)
-        self.enc31 = Encoder(128,256,k_size=3,stride=2)
+        self.enc30 = Encoder(128,256,stride=2)
+        self.enc31 = Encoder(128,256,stride=2)
         #-------------------------------------
         self.stn3 = STN((32,32))
-        self.enc40 = Encoder(256,512,k_size=1,stride=2)
-        self.enc41 = Encoder(256,512,k_size=1,stride=2)
+        self.enc40 = Encoder(256,512,stride=2)
+        self.enc41 = Encoder(256,512,stride=2)
         #-------------------------------------
         self.stn4 = STN((16,16))
-        self.enc5 = Encoder(512,512,k_size=1,stride=2)
-        self.enc6 = Encoder(512,512,k_size=1,stride=2)
-        self.enc7 = Encoder(512,512,k_size=1,stride = 2)
+        self.enc5 = Encoder(512,512,stride=2)
+        self.enc6 = Encoder(512,512,stride=2)
+        self.enc7 = Encoder(512,512,stride = 2)
         #Decoder
-        self.dec0 = Decoder(512, 1024,k_size=3, stride=1)
-        self.dec1 = Decoder(1024, 512,k_size=3, stride=1)
-        self.dec2 = Decoder(512, 512,k_size=3, stride=1)
-        self.dec3 = Decoder(512, 256,k_size=3, stride=1)
-        self.dec4 = Decoder(256, 128,k_size=5, stride=1)
-        self.dec5 = Decoder(128, 64,k_size=5, stride=1 )
-        self.dec6 = Decoder(64, 3,k_size=3, stride=1 ,tanh=True)
+        self.dec0 = Decoder(512, 1024, stride=1)
+        self.dec1 = Decoder(1024, 512, stride=1)
+        self.dec2 = Decoder(512, 512, stride=1)
+        self.dec3 = Decoder(512, 256, stride=1)
+        self.dec4 = Decoder(256, 128, stride=1)
+        self.dec5 = Decoder(128, 64, stride=1 )
+        self.dec6 = Decoder(64, 3, stride=1 ,tanh=True)
     def transform(self, input, theta, layer):
         for i in range(layer):
             mat = theta[layer - i - 1]
