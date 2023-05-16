@@ -142,7 +142,7 @@ class STN(tf.keras.Model):
         warped = self.BilinearInterpolation([feat1,theta])
         return warped, theta
 
-initializer = tf.keras.initializers.RandomNormal(mean = 0, stddev=0.002,seed=42)
+initializer = tf.keras.initializers.RandomNormal(mean = 0, stddev=0.02,seed=42)
 class UNet(tf.keras.Model):
     def __init__(self):
         super(UNet,self).__init__()
