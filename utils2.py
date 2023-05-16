@@ -190,24 +190,24 @@ class UNet(tf.keras.Model):
         self.enc21 = Encoder(64,128,k_size=5,stride=2)
         #-------------------------------------
         self.stn2 = STN((64,64))
-        self.enc30 = Encoder(128,256,k_size=5,stride=2)
-        self.enc31 = Encoder(128,256,k_size=5,stride=2)
+        self.enc30 = Encoder(128,256,k_size=3,stride=2)
+        self.enc31 = Encoder(128,256,k_size=3,stride=2)
         #-------------------------------------
         self.stn3 = STN((32,32))
-        self.enc40 = Encoder(256,512,k_size=3,stride=2)
-        self.enc41 = Encoder(256,512,k_size=3,stride=2)
+        self.enc40 = Encoder(256,512,k_size=1,stride=2)
+        self.enc41 = Encoder(256,512,k_size=1,stride=2)
         #-------------------------------------
         self.stn4 = STN((16,16))
-        self.enc5 = Encoder(512,512,k_size=3,stride=2)
-        self.enc6 = Encoder(512,512,k_size=3,stride=2)
-        self.enc7 = Encoder(512,512,k_size=3,stride = 2)
+        self.enc5 = Encoder(512,512,k_size=1,stride=2)
+        self.enc6 = Encoder(512,512,k_size=1,stride=2)
+        self.enc7 = Encoder(512,512,k_size=1,stride = 2)
         #Decoder
         self.dec0 = Decoder(512, 1024,k_size=3, stride=1)
         self.dec1 = Decoder(1024, 512,k_size=3, stride=1)
         self.dec2 = Decoder(512, 512,k_size=3, stride=1)
         self.dec3 = Decoder(512, 256,k_size=3, stride=1)
-        self.dec4 = Decoder(256, 128,k_size=3, stride=1)
-        self.dec5 = Decoder(128, 64,k_size=3, stride=1 )
+        self.dec4 = Decoder(256, 128,k_size=5, stride=1)
+        self.dec5 = Decoder(128, 64,k_size=5, stride=1 )
         self.dec6 = Decoder(64, 3,k_size=3, stride=1 ,tanh=True)
     def transform(self, input, theta, layer):
         for i in range(layer):
@@ -239,7 +239,7 @@ class UNet(tf.keras.Model):
         s5 = self.enc5(T4)
         s6 = self.enc6(s5)
         s7 = self.enc7(s6)
-        T = [theta4, theta3 ,theta1 ,theta1, theta0]
+        T = [theta4, theta3 ,theta2 ,theta1, theta0]
 
         up0 = tf.keras.layers.UpSampling2D(size =(2,2),interpolation='nearest')(s7)
         dec0 = self.dec0(tf.concat([up0,s6],axis=-1))
