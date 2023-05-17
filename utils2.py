@@ -5,6 +5,10 @@ from keras.layers import Conv2D,MaxPool2D,Concatenate,UpSampling2D,Input,LeakyRe
 import cv2
 
 class Localization(tf.keras.layers.Layer):
+    '''
+    1o κομμάτι του Spatial Transformer
+    κάνει regression σε 2x3 πίνακα μετασχηματισμού
+    '''
     def __init__(self):
         super(Localization, self).__init__()
         self.pool1 = tf.keras.layers.MaxPool2D(trainable=True)
@@ -33,6 +37,10 @@ class Localization(tf.keras.layers.Layer):
         return theta
     
 class BilinearInterpolation(tf.keras.layers.Layer):
+    '''2ο κομμάτι του Spatial Transformer
+    είναι αυτό που εφαρμόζει το μετασχηματισμό του Localization ,κάνοντας το 
+    απαραίοτητο interpolation
+    '''
     def __init__(self, height=40, width=40):
         super(BilinearInterpolation, self).__init__()
         self.height = height
@@ -132,6 +140,9 @@ class BilinearInterpolation(tf.keras.layers.Layer):
         return tf.math.add_n([wa*Ia + wb*Ib + wc*Ic + wd*Id])    
 
 class STN(tf.keras.Model):
+    '''φτιάχνω μόντελο, θα μπορούσε να ήταν και layer
+    που λειτουργεί ως SpatialTransformer
+    '''
     def __init__(self,shape):
         super(STN, self).__init__()
         self.Localization = Localization()
@@ -142,11 +153,17 @@ class STN(tf.keras.Model):
         warped = self.BilinearInterpolation([feat1,theta])
         return warped, theta
 
+
 initializer = tf.keras.initializers.RandomNormal(mean = 0, stddev=0.02,seed=42)
 class UNet(tf.keras.Model):
+    '''αρχιτεκτονική του generator
+    '''
     def __init__(self):
         super(UNet,self).__init__()
         class Encoder(tf.keras.layers.Layer):
+            '''δημιουργώ layers για κάθε encoder block
+            για πιο σύντομο κώδικα
+            '''
             def __init__(self, in_nc, out_nc, stride, k_size=3, pad=(1,1)):
                 super(Encoder, self).__init__()
 
@@ -162,6 +179,9 @@ class UNet(tf.keras.Model):
 
 
         class Decoder(tf.keras.layers.Layer):
+            '''δημιουργώ layers για κάθε decoder block
+            για πιο σύντομο κώδικα
+            '''
             def __init__(self, in_nc, out_nc, stride, k_size=3, pad=1, tanh=False):
                 super(Decoder, self).__init__()
 
@@ -179,15 +199,16 @@ class UNet(tf.keras.Model):
                 s = self.seq(x)
                 s = self.activ(s)
                 return s 
-            
+        '''αρχικποιώ τα layers του δικτύου
+        '''    
         #Encoder
         self.stn0 = STN((256,256))
-        self.enc10 = Encoder(3,64, stride=2)
-        self.enc11 = Encoder(5, 64, stride=2)
+        self.enc10 = Encoder(3,64, stride=2) #δεν χρησιμοποιώ τελικά κάπου την πρώτη παράμετρο αλλά είναι ο αριθμός των καναλιών εισόδου 
+        self.enc11 = Encoder(5, 64, stride=2) #το αφησα ομως γιατι βοηθάει στην παρακολούθηση της αρχιτεκτονικής
         #-------------------------------------
-        self.stn1 = STN((128,128))
-        self.enc20 = Encoder(64,128,stride=2)
-        self.enc21 = Encoder(64,128,stride=2)
+        self.stn1 = STN((128,128))               
+        self.enc20 = Encoder(64,128,stride=2) #μέγεθος των φίλτρων είναι παντού 3x3,είναι default parameter, αν είχα 5x5 το μέγεθος του δικτύου ξεφεύγει
+        self.enc21 = Encoder(64,128,stride=2) #μειώνω τις διαστάσεις /2 μέσω του stride και αποφεύγω pooling layers
         #-------------------------------------
         self.stn2 = STN((64,64))
         self.enc30 = Encoder(128,256,stride=2)
@@ -207,9 +228,12 @@ class UNet(tf.keras.Model):
         self.dec2 = Decoder(512, 512, stride=1)
         self.dec3 = Decoder(512, 256, stride=1)
         self.dec4 = Decoder(256, 128, stride=1)
-        self.dec5 = Decoder(128, 64, stride=1 )
-        self.dec6 = Decoder(64, 3, stride=1 ,tanh=True)
+        self.dec5 = Decoder(128, 64, stride=1 ) #όπου δεν αναφέρεται στα Decoder layers είναι Relu και στα encoder LeakyRelu
+        self.dec6 = Decoder(64, 3, stride=1 ,tanh=True) #Βάζω tanh ενεργοποίηση για να είμαι απο -1 ως 1, και 3 κανάλια για rgb έξοδο
     def transform(self, input, theta, layer):
+        '''συνάρτηση που μετασχηματίζει τα skip connections με τις προβλέψεις των STN,
+        συγγνώμη αν είναι σπαζοκεφαλιά, δεν μπορούσα να σκεφτώ κάτι άλλο
+        '''
         for i in range(layer):
             mat = theta[layer - i - 1]
             input = BilinearInterpolation(input.shape[1],input.shape[2])([input,mat])
@@ -217,8 +241,6 @@ class UNet(tf.keras.Model):
     
     def call(self,input):
         sequence, unsteady = input
-        
-    
         T0, theta0 = self.stn0([unsteady,sequence])
         s10 = self.enc10(T0)
         s11 = self.enc11(sequence)
@@ -240,7 +262,7 @@ class UNet(tf.keras.Model):
         s6 = self.enc6(s5)
         s7 = self.enc7(s6)
         T = [theta4, theta3 ,theta2 ,theta1, theta0]
-
+        #-------------------------------------------------
         up0 = tf.keras.layers.UpSampling2D(size =(2,2),interpolation='nearest')(s7)
         dec0 = self.dec0(tf.concat([up0,s6],axis=-1))
         up1 = tf.keras.layers.UpSampling2D(size =(2,2),interpolation='nearest')(dec0)
@@ -305,7 +327,7 @@ class SaveModelsCallback(tf.keras.callbacks.Callback):
             generator_file_name = self.path + "/generator.h5"
             d1_file_name = self.path + "/d1.h5"
             d2_file_name = self.path + "/d2.h5"
-            self.generator.save(generator_file_name)
-            self.d1.save(d1_file_name)
-            self.d2.save(d2_file_name)
+            self.generator.save_weights(generator_file_name)
+            self.d1.save_weights(d1_file_name)
+            self.d2.save_weights(d2_file_name)
 
